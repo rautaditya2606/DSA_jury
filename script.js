@@ -140,10 +140,6 @@ class BSTVisualizer {
     constructor(containerId) {
         this.container = d3.select(`#${containerId}`);
         this.bst = new BinarySearchTree();
-        this.traversalData = [];
-        this.currentTraversalIndex = 0;
-        this.isTraversing = false;
-        this.traversalInterval = null;
         this.animationSpeed = 1000; // milliseconds
         
         this.setupSVG();
@@ -192,18 +188,6 @@ class BSTVisualizer {
         document.getElementById('inorderBtn').addEventListener('click', () => this.handleTraversal('inorder'));
         document.getElementById('preorderBtn').addEventListener('click', () => this.handleTraversal('preorder'));
         document.getElementById('postorderBtn').addEventListener('click', () => this.handleTraversal('postorder'));
-        
-        // Traversal controls
-        document.getElementById('playBtn').addEventListener('click', () => this.playTraversal());
-        document.getElementById('pauseBtn').addEventListener('click', () => this.pauseTraversal());
-        document.getElementById('nextBtn').addEventListener('click', () => this.nextTraversalStep());
-        
-        // Speed control
-        document.getElementById('speedSlider').addEventListener('input', (e) => {
-            this.animationSpeed = 2000 - (e.target.value * 300);
-            const speeds = ['Very Slow', 'Slow', 'Normal', 'Fast', 'Very Fast'];
-            document.getElementById('speedDisplay').textContent = speeds[e.target.value - 1];
-        });
     }
 
     handleNodeClick(nodeData) {
@@ -226,8 +210,6 @@ class BSTVisualizer {
     }
 
     handleTraversal(type) {
-        this.clearTraversal();
-        
         let nodes;
         switch (type) {
             case 'inorder':
@@ -241,69 +223,36 @@ class BSTVisualizer {
                 break;
         }
         
-        this.traversalData = nodes;
-        this.currentTraversalIndex = 0;
-        
         // Update traversal output
         const output = nodes.map(node => node.value).join(' → ');
         document.getElementById('traversalOutput').value = `${type.toUpperCase()}: ${output}`;
         
-        // Enable controls
-        document.getElementById('playBtn').disabled = false;
-        document.getElementById('nextBtn').disabled = false;
+        // Animate traversal
+        this.animateTraversal(nodes);
     }
 
-    playTraversal() {
-        if (this.isTraversing) return;
-        
-        this.isTraversing = true;
-        document.getElementById('playBtn').disabled = true;
-        document.getElementById('pauseBtn').disabled = false;
-        
-        this.traversalInterval = setInterval(() => {
-            if (this.currentTraversalIndex < this.traversalData.length) {
-                this.nextTraversalStep();
-            } else {
-                this.pauseTraversal();
-            }
-        }, this.animationSpeed);
-    }
-
-    pauseTraversal() {
-        this.isTraversing = false;
-        if (this.traversalInterval) {
-            clearInterval(this.traversalInterval);
-            this.traversalInterval = null;
-        }
-        
-        document.getElementById('playBtn').disabled = false;
-        document.getElementById('pauseBtn').disabled = true;
-    }
-
-    nextTraversalStep() {
-        if (this.currentTraversalIndex < this.traversalData.length) {
-            const node = this.traversalData[this.currentTraversalIndex];
-            this.highlightNode(node.id, 'traversal');
-            this.currentTraversalIndex++;
-            
-            if (this.currentTraversalIndex >= this.traversalData.length) {
-                this.pauseTraversal();
-            }
-        }
-    }
-
-    clearTraversal() {
-        this.pauseTraversal();
-        this.traversalData = [];
-        this.currentTraversalIndex = 0;
-        
-        document.getElementById('playBtn').disabled = true;
-        document.getElementById('pauseBtn').disabled = true;
-        document.getElementById('nextBtn').disabled = true;
-        
-        // Clear any traversal highlights
+    animateTraversal(nodes) {
+        // Clear any existing highlights
         this.g.selectAll('.node').classed('traversal', false);
         this.g.selectAll('.edge').classed('traversal', false);
+        
+        let index = 0;
+        const animateNext = () => {
+            if (index < nodes.length) {
+                const node = nodes[index];
+                this.highlightNode(node.id, 'traversal');
+                index++;
+                setTimeout(animateNext, this.animationSpeed);
+            } else {
+                // Clear highlights after animation
+                setTimeout(() => {
+                    this.g.selectAll('.node').classed('traversal', false);
+                    this.g.selectAll('.edge').classed('traversal', false);
+                }, 1000);
+            }
+        };
+        
+        animateNext();
     }
 
     animateSearchPath(path, found) {
