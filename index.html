@@ -1,0 +1,727 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Binary Search Tree Visualizer</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <style>
+        .node {
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        .node:hover {
+            transform: scale(1.1);
+        }
+        .node.highlighted {
+            fill: #fbbf24 !important;
+            stroke: #f59e0b !important;
+            stroke-width: 3px !important;
+        }
+        .node.search-path {
+            fill: #10b981 !important;
+            stroke: #059669 !important;
+            stroke-width: 3px !important;
+        }
+        .node.traversal {
+            fill: #8b5cf6 !important;
+            stroke: #7c3aed !important;
+            stroke-width: 3px !important;
+        }
+        .edge {
+            stroke: #374151;
+            stroke-width: 2px;
+            fill: none;
+        }
+        .edge.highlighted {
+            stroke: #f59e0b;
+            stroke-width: 3px;
+        }
+        .edge.search-path {
+            stroke: #059669;
+            stroke-width: 3px;
+        }
+        .edge.traversal {
+            stroke: #7c3aed;
+            stroke-width: 3px;
+        }
+        .node-text {
+            font-family: 'Arial', sans-serif;
+            font-size: 14px;
+            font-weight: bold;
+            text-anchor: middle;
+            dominant-baseline: central;
+            fill: white;
+            pointer-events: none;
+        }
+        .control-button {
+            transition: all 0.2s ease;
+        }
+        .control-button:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+        }
+        .control-button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+    </style>
+</head>
+<body class="bg-gray-100 min-h-screen">
+    <div class="container mx-auto px-4 py-8">
+        <!-- Header -->
+        <div class="text-center mb-8">
+            <h1 class="text-4xl font-bold text-gray-800 mb-2">Binary Search Tree Visualizer</h1>
+            <p class="text-gray-600">Interactive visualization of BST operations with smooth animations</p>
+        </div>
+
+        <!-- Controls Panel -->
+        <div class="bg-white rounded-lg shadow-lg p-6 mb-8">
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <!-- Input Operations -->
+                <div class="space-y-4">
+                    <h3 class="text-lg font-semibold text-gray-700">Tree Operations</h3>
+                    <div class="flex space-x-2">
+                        <input 
+                            type="number" 
+                            id="valueInput" 
+                            placeholder="Enter value"
+                            class="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        >
+                        <button 
+                            id="insertBtn" 
+                            class="control-button bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-md font-medium"
+                        >
+                            Insert
+                        </button>
+                    </div>
+                    <div class="flex space-x-2">
+                        <button 
+                            id="deleteBtn" 
+                            class="control-button bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-md font-medium flex-1"
+                        >
+                            Delete
+                        </button>
+                        <button 
+                            id="searchBtn" 
+                            class="control-button bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-md font-medium flex-1"
+                        >
+                            Search
+                        </button>
+                    </div>
+                    <button 
+                        id="clearBtn" 
+                        class="control-button bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded-md font-medium w-full"
+                    >
+                        Clear Tree
+                    </button>
+                </div>
+
+                <!-- Traversal Operations -->
+                <div class="space-y-4">
+                    <h3 class="text-lg font-semibold text-gray-700">Traversals</h3>
+                    <div class="grid grid-cols-1 gap-2">
+                        <button 
+                            id="inorderBtn" 
+                            class="control-button bg-purple-500 hover:bg-purple-600 text-white px-4 py-2 rounded-md font-medium"
+                        >
+                            Inorder
+                        </button>
+                        <button 
+                            id="preorderBtn" 
+                            class="control-button bg-purple-500 hover:bg-purple-600 text-white px-4 py-2 rounded-md font-medium"
+                        >
+                            Preorder
+                        </button>
+                        <button 
+                            id="postorderBtn" 
+                            class="control-button bg-purple-500 hover:bg-purple-600 text-white px-4 py-2 rounded-md font-medium"
+                        >
+                            Postorder
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Traversal Controls -->
+                <div class="space-y-4">
+                    <h3 class="text-lg font-semibold text-gray-700">Traversal Controls</h3>
+                    <div class="grid grid-cols-3 gap-2">
+                        <button 
+                            id="playBtn" 
+                            class="control-button bg-green-500 hover:bg-green-600 text-white px-3 py-2 rounded-md font-medium"
+                            disabled
+                        >
+                            ▶️
+                        </button>
+                        <button 
+                            id="pauseBtn" 
+                            class="control-button bg-yellow-500 hover:bg-yellow-600 text-white px-3 py-2 rounded-md font-medium"
+                            disabled
+                        >
+                            ⏸️
+                        </button>
+                        <button 
+                            id="nextBtn" 
+                            class="control-button bg-blue-500 hover:bg-blue-600 text-white px-3 py-2 rounded-md font-medium"
+                            disabled
+                        >
+                            ⏭️
+                        </button>
+                    </div>
+                    <div class="text-sm text-gray-600">
+                        <div>Speed: <span id="speedDisplay">Normal</span></div>
+                        <input 
+                            type="range" 
+                            id="speedSlider" 
+                            min="1" 
+                            max="5" 
+                            value="3" 
+                            class="w-full mt-1"
+                        >
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Visualization Area -->
+        <div class="bg-white rounded-lg shadow-lg p-6 mb-8">
+            <h3 class="text-lg font-semibold text-gray-700 mb-4">Tree Visualization</h3>
+            <div id="treeContainer" class="border border-gray-200 rounded-lg min-h-96 bg-gray-50"></div>
+        </div>
+
+        <!-- Traversal Output -->
+        <div class="bg-white rounded-lg shadow-lg p-6">
+            <h3 class="text-lg font-semibold text-gray-700 mb-4">Traversal Output</h3>
+            <textarea 
+                id="traversalOutput" 
+                class="w-full h-32 p-3 border border-gray-300 rounded-md font-mono text-sm bg-gray-50"
+                placeholder="Traversal results will appear here..."
+                readonly
+            ></textarea>
+        </div>
+    </div>
+
+    <script>
+        // BST Node Class
+        class BSTNode {
+            constructor(value) {
+                this.value = value;
+                this.left = null;
+                this.right = null;
+                this.parent = null;
+                this.id = Math.random().toString(36).substr(2, 9); // Unique ID for D3
+            }
+        }
+
+        // BST Class
+        class BinarySearchTree {
+            constructor() {
+                this.root = null;
+                this.size = 0;
+            }
+
+            insert(value) {
+                const newNode = new BSTNode(value);
+                
+                if (!this.root) {
+                    this.root = newNode;
+                    this.size++;
+                    return newNode;
+                }
+
+                let current = this.root;
+                while (current) {
+                    if (value < current.value) {
+                        if (!current.left) {
+                            current.left = newNode;
+                            newNode.parent = current;
+                            this.size++;
+                            return newNode;
+                        }
+                        current = current.left;
+                    } else if (value > current.value) {
+                        if (!current.right) {
+                            current.right = newNode;
+                            newNode.parent = current;
+                            this.size++;
+                            return newNode;
+                        }
+                        current = current.right;
+                    } else {
+                        // Value already exists
+                        return null;
+                    }
+                }
+            }
+
+            delete(value) {
+                const node = this.findNode(value);
+                if (!node) return null;
+
+                const deletedNode = { ...node };
+                
+                if (!node.left && !node.right) {
+                    // Leaf node
+                    this.replaceNode(node, null);
+                } else if (!node.left) {
+                    // Only right child
+                    this.replaceNode(node, node.right);
+                } else if (!node.right) {
+                    // Only left child
+                    this.replaceNode(node, node.left);
+                } else {
+                    // Two children - find inorder successor
+                    const successor = this.findMin(node.right);
+                    node.value = successor.value;
+                    this.replaceNode(successor, successor.right);
+                }
+                
+                this.size--;
+                return deletedNode;
+            }
+
+            findNode(value) {
+                let current = this.root;
+                while (current) {
+                    if (value === current.value) return current;
+                    current = value < current.value ? current.left : current.right;
+                }
+                return null;
+            }
+
+            search(value) {
+                const path = [];
+                let current = this.root;
+                
+                while (current) {
+                    path.push(current);
+                    if (value === current.value) {
+                        return { found: true, path };
+                    }
+                    current = value < current.value ? current.left : current.right;
+                }
+                
+                return { found: false, path };
+            }
+
+            findMin(node) {
+                while (node && node.left) {
+                    node = node.left;
+                }
+                return node;
+            }
+
+            replaceNode(oldNode, newNode) {
+                if (!oldNode.parent) {
+                    this.root = newNode;
+                } else if (oldNode === oldNode.parent.left) {
+                    oldNode.parent.left = newNode;
+                } else {
+                    oldNode.parent.right = newNode;
+                }
+                
+                if (newNode) {
+                    newNode.parent = oldNode.parent;
+                }
+            }
+
+            inorder() {
+                const result = [];
+                this.inorderHelper(this.root, result);
+                return result;
+            }
+
+            inorderHelper(node, result) {
+                if (node) {
+                    this.inorderHelper(node.left, result);
+                    result.push(node);
+                    this.inorderHelper(node.right, result);
+                }
+            }
+
+            preorder() {
+                const result = [];
+                this.preorderHelper(this.root, result);
+                return result;
+            }
+
+            preorderHelper(node, result) {
+                if (node) {
+                    result.push(node);
+                    this.preorderHelper(node.left, result);
+                    this.preorderHelper(node.right, result);
+                }
+            }
+
+            postorder() {
+                const result = [];
+                this.postorderHelper(this.root, result);
+                return result;
+            }
+
+            postorderHelper(node, result) {
+                if (node) {
+                    this.postorderHelper(node.left, result);
+                    this.postorderHelper(node.right, result);
+                    result.push(node);
+                }
+            }
+
+            clear() {
+                this.root = null;
+                this.size = 0;
+            }
+
+            // Convert BST to D3 hierarchical format
+            toD3Format() {
+                if (!this.root) return null;
+                
+                const convert = (node) => {
+                    if (!node) return null;
+                    
+                    const d3Node = {
+                        id: node.id,
+                        name: node.value.toString(),
+                        value: node.value,
+                        children: []
+                    };
+                    
+                    if (node.left) {
+                        d3Node.children.push(convert(node.left));
+                    }
+                    if (node.right) {
+                        d3Node.children.push(convert(node.right));
+                    }
+                    
+                    return d3Node;
+                };
+                
+                return convert(this.root);
+            }
+        }
+
+        // Visualization Class
+        class BSTVisualizer {
+            constructor(containerId) {
+                this.container = d3.select(`#${containerId}`);
+                this.bst = new BinarySearchTree();
+                this.traversalData = [];
+                this.currentTraversalIndex = 0;
+                this.isTraversing = false;
+                this.traversalInterval = null;
+                this.animationSpeed = 1000; // milliseconds
+                
+                this.setupSVG();
+                this.setupEventListeners();
+            }
+
+            setupSVG() {
+                const containerRect = this.container.node().getBoundingClientRect();
+                this.width = containerRect.width || 800;
+                this.height = 400;
+                
+                this.svg = this.container
+                    .append('svg')
+                    .attr('width', this.width)
+                    .attr('height', this.height)
+                    .style('background-color', '#f9fafb');
+                
+                this.g = this.svg.append('g');
+                
+                // Zoom behavior
+                this.zoom = d3.zoom()
+                    .scaleExtent([0.1, 3])
+                    .on('zoom', (event) => {
+                        this.g.attr('transform', event.transform);
+                    });
+                
+                this.svg.call(this.zoom);
+            }
+
+            setupEventListeners() {
+                // Operation buttons
+                document.getElementById('insertBtn').addEventListener('click', () => this.handleInsert());
+                document.getElementById('deleteBtn').addEventListener('click', () => this.handleDelete());
+                document.getElementById('searchBtn').addEventListener('click', () => this.handleSearch());
+                document.getElementById('clearBtn').addEventListener('click', () => this.handleClear());
+                
+                // Traversal buttons
+                document.getElementById('inorderBtn').addEventListener('click', () => this.handleTraversal('inorder'));
+                document.getElementById('preorderBtn').addEventListener('click', () => this.handleTraversal('preorder'));
+                document.getElementById('postorderBtn').addEventListener('click', () => this.handleTraversal('postorder'));
+                
+                // Traversal controls
+                document.getElementById('playBtn').addEventListener('click', () => this.playTraversal());
+                document.getElementById('pauseBtn').addEventListener('click', () => this.pauseTraversal());
+                document.getElementById('nextBtn').addEventListener('click', () => this.nextTraversalStep());
+                
+                // Speed control
+                document.getElementById('speedSlider').addEventListener('input', (e) => {
+                    this.animationSpeed = 2000 - (e.target.value * 300);
+                    const speeds = ['Very Slow', 'Slow', 'Normal', 'Fast', 'Very Fast'];
+                    document.getElementById('speedDisplay').textContent = speeds[e.target.value - 1];
+                });
+                
+                // Enter key support
+                document.getElementById('valueInput').addEventListener('keypress', (e) => {
+                    if (e.key === 'Enter') {
+                        this.handleInsert();
+                    }
+                });
+            }
+
+            handleInsert() {
+                const value = parseInt(document.getElementById('valueInput').value);
+                if (isNaN(value)) {
+                    alert('Please enter a valid number');
+                    return;
+                }
+                
+                const newNode = this.bst.insert(value);
+                if (newNode) {
+                    this.drawTree();
+                    this.highlightNode(newNode.id, 'inserted');
+                    document.getElementById('valueInput').value = '';
+                } else {
+                    alert('Value already exists in the tree');
+                }
+            }
+
+            handleDelete() {
+                const value = parseInt(document.getElementById('valueInput').value);
+                if (isNaN(value)) {
+                    alert('Please enter a valid number');
+                    return;
+                }
+                
+                const deletedNode = this.bst.delete(value);
+                if (deletedNode) {
+                    this.highlightNode(deletedNode.id, 'deleted');
+                    setTimeout(() => {
+                        this.drawTree();
+                    }, 500);
+                    document.getElementById('valueInput').value = '';
+                } else {
+                    alert('Value not found in the tree');
+                }
+            }
+
+            handleSearch() {
+                const value = parseInt(document.getElementById('valueInput').value);
+                if (isNaN(value)) {
+                    alert('Please enter a valid number');
+                    return;
+                }
+                
+                const result = this.bst.search(value);
+                this.animateSearchPath(result.path, result.found);
+                document.getElementById('valueInput').value = '';
+            }
+
+            handleClear() {
+                this.bst.clear();
+                this.clearTraversal();
+                this.drawTree();
+            }
+
+            handleTraversal(type) {
+                this.clearTraversal();
+                
+                let nodes;
+                switch (type) {
+                    case 'inorder':
+                        nodes = this.bst.inorder();
+                        break;
+                    case 'preorder':
+                        nodes = this.bst.preorder();
+                        break;
+                    case 'postorder':
+                        nodes = this.bst.postorder();
+                        break;
+                }
+                
+                this.traversalData = nodes;
+                this.currentTraversalIndex = 0;
+                
+                // Update traversal output
+                const output = nodes.map(node => node.value).join(' → ');
+                document.getElementById('traversalOutput').value = `${type.toUpperCase()}: ${output}`;
+                
+                // Enable controls
+                document.getElementById('playBtn').disabled = false;
+                document.getElementById('nextBtn').disabled = false;
+            }
+
+            playTraversal() {
+                if (this.isTraversing) return;
+                
+                this.isTraversing = true;
+                document.getElementById('playBtn').disabled = true;
+                document.getElementById('pauseBtn').disabled = false;
+                
+                this.traversalInterval = setInterval(() => {
+                    if (this.currentTraversalIndex < this.traversalData.length) {
+                        this.nextTraversalStep();
+                    } else {
+                        this.pauseTraversal();
+                    }
+                }, this.animationSpeed);
+            }
+
+            pauseTraversal() {
+                this.isTraversing = false;
+                if (this.traversalInterval) {
+                    clearInterval(this.traversalInterval);
+                    this.traversalInterval = null;
+                }
+                
+                document.getElementById('playBtn').disabled = false;
+                document.getElementById('pauseBtn').disabled = true;
+            }
+
+            nextTraversalStep() {
+                if (this.currentTraversalIndex < this.traversalData.length) {
+                    const node = this.traversalData[this.currentTraversalIndex];
+                    this.highlightNode(node.id, 'traversal');
+                    this.currentTraversalIndex++;
+                    
+                    if (this.currentTraversalIndex >= this.traversalData.length) {
+                        this.pauseTraversal();
+                    }
+                }
+            }
+
+            clearTraversal() {
+                this.pauseTraversal();
+                this.traversalData = [];
+                this.currentTraversalIndex = 0;
+                
+                document.getElementById('playBtn').disabled = true;
+                document.getElementById('pauseBtn').disabled = true;
+                document.getElementById('nextBtn').disabled = true;
+                
+                // Clear any traversal highlights
+                this.g.selectAll('.node').classed('traversal', false);
+                this.g.selectAll('.edge').classed('traversal', false);
+            }
+
+            animateSearchPath(path, found) {
+                if (path.length === 0) return;
+                
+                let index = 0;
+                const animateNext = () => {
+                    if (index < path.length) {
+                        const node = path[index];
+                        this.highlightNode(node.id, 'search-path');
+                        index++;
+                        setTimeout(animateNext, this.animationSpeed / 2);
+                    } else if (found) {
+                        // Final highlight for found node
+                        setTimeout(() => {
+                            this.g.selectAll('.node').classed('search-path', false);
+                            this.g.selectAll('.edge').classed('search-path', false);
+                        }, 1000);
+                    } else {
+                        // Clear highlights if not found
+                        setTimeout(() => {
+                            this.g.selectAll('.node').classed('search-path', false);
+                            this.g.selectAll('.edge').classed('search-path', false);
+                        }, 500);
+                    }
+                };
+                
+                animateNext();
+            }
+
+            highlightNode(nodeId, type) {
+                // Clear previous highlights
+                this.g.selectAll('.node').classed('highlighted search-path traversal', false);
+                this.g.selectAll('.edge').classed('highlighted search-path traversal', false);
+                
+                // Add new highlight
+                this.g.selectAll('.node')
+                    .filter(d => d.id === nodeId)
+                    .classed(type, true);
+                
+                // Highlight connecting edge if it exists
+                this.g.selectAll('.edge')
+                    .filter(d => d.target.id === nodeId)
+                    .classed(type, true);
+            }
+
+            drawTree() {
+                const treeData = this.bst.toD3Format();
+                
+                // Clear existing tree
+                this.g.selectAll('*').remove();
+                
+                if (!treeData) {
+                    // Empty tree message
+                    this.g.append('text')
+                        .attr('x', this.width / 2)
+                        .attr('y', this.height / 2)
+                        .attr('text-anchor', 'middle')
+                        .attr('font-size', '18px')
+                        .attr('fill', '#6b7280')
+                        .text('Tree is empty');
+                    return;
+                }
+                
+                // Create tree layout
+                const tree = d3.tree().size([this.width - 100, this.height - 100]);
+                const root = d3.hierarchy(treeData);
+                tree(root);
+                
+                // Draw edges
+                const links = this.g.selectAll('.edge')
+                    .data(root.links())
+                    .enter()
+                    .append('path')
+                    .attr('class', 'edge')
+                    .attr('d', d3.linkVertical()
+                        .x(d => d.x + 50)
+                        .y(d => d.y + 50))
+                    .style('fill', 'none')
+                    .style('stroke', '#374151')
+                    .style('stroke-width', 2);
+                
+                // Draw nodes
+                const nodes = this.g.selectAll('.node')
+                    .data(root.descendants())
+                    .enter()
+                    .append('g')
+                    .attr('class', 'node')
+                    .attr('transform', d => `translate(${d.x + 50}, ${d.y + 50})`);
+                
+                // Add circles
+                nodes.append('circle')
+                    .attr('r', 20)
+                    .style('fill', '#3b82f6')
+                    .style('stroke', '#1e40af')
+                    .style('stroke-width', 2);
+                
+                // Add text
+                nodes.append('text')
+                    .attr('class', 'node-text')
+                    .text(d => d.data.name)
+                    .style('font-size', '14px')
+                    .style('font-weight', 'bold');
+                
+                // Center the tree
+                const bounds = this.g.node().getBBox();
+                const xOffset = (this.width - bounds.width) / 2 - bounds.x;
+                const yOffset = (this.height - bounds.height) / 2 - bounds.y;
+                
+                this.g.attr('transform', `translate(${xOffset}, ${yOffset})`);
+            }
+        }
+
+        // Initialize the visualizer when the page loads
+        document.addEventListener('DOMContentLoaded', () => {
+            new BSTVisualizer('treeContainer');
+        });
+    </script>
+</body>
+</html>
