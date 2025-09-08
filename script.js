@@ -192,6 +192,8 @@ class BSTVisualizer {
         this.container = d3.select(`#${containerId}`);
         this.bst = new BinarySearchTree();
         this.animationSpeed = 1000; // milliseconds
+        this.currentAnimationToken = 0;
+        this._pendingTimeout = null;
         
         this.setupSVG();
         this.setupEventListeners();
@@ -313,13 +315,17 @@ class BSTVisualizer {
         document.getElementById('traversalOutput').value = `${type.toUpperCase()}: ${output}`;
         
         // Animate traversal
-        this.animateTraversal(nodes);
+        const token = ++this.currentAnimationToken;
+        this.animateTraversal(nodes, token);
     }
 
-    animateTraversal(nodes) {
-        // Clear any existing highlights
+    animateTraversal(nodes, token) {
+        // Ensure clean start
         this.g.selectAll('.node').classed('traversal', false);
-        this.g.selectAll('.edge').classed('traversal', false);
+        this.g.selectAll('.edge')
+            .classed('traversal', false)
+            .attr('stroke-dasharray', null)
+            .attr('stroke-dashoffset', null);
 
         // Map node id to parent id using current D3 hierarchy in the scene
         const idToParentId = new Map();
@@ -331,17 +337,26 @@ class BSTVisualizer {
 
         let index = 0;
         const animateNext = () => {
+            if (token !== this.currentAnimationToken) return;
             if (index < nodes.length) {
                 const current = nodes[index];
-                // Highlight node with traversal styling
+
+                // Clear previous step highlight so only one node/edge is active
+                this.g.selectAll('.node').classed('traversal', false);
+                this.g.selectAll('.edge')
+                    .classed('traversal', false)
+                    .attr('stroke-dasharray', null)
+                    .attr('stroke-dashoffset', null);
+
+                // Highlight current node
                 this.g.selectAll('.node')
                     .filter(d => d && d.data && d.data.id === current.id)
                     .classed('traversal', true);
 
-                // Draw incoming edge with stroke-draw transition if it exists
+                // Animate incoming edge for the current node if it has a parent
                 const parentId = idToParentId.get(current.id);
                 if (parentId) {
-                    this.g.selectAll('.edge')
+                    const edgeSel = this.g.selectAll('.edge')
                         .filter(l => l && l.target && l.target.data && l.target.data.id === current.id)
                         .classed('traversal', true)
                         .attr('stroke-dasharray', function() {
@@ -354,19 +369,25 @@ class BSTVisualizer {
                         .transition()
                         .duration(this.animationSpeed)
                         .attr('stroke-dashoffset', 0);
-                }
 
-                index++;
-                setTimeout(animateNext, this.animationSpeed);
+                    // Chain next step to the end of the edge transition
+                    edgeSel.on('end', () => {
+                        if (token !== this.currentAnimationToken) return;
+                        index++;
+                        animateNext();
+                    });
+                } else {
+                    // Root has no incoming edge; advance after a delay
+                    index++;
+                    setTimeout(animateNext, this.animationSpeed);
+                }
             } else {
-                // Clear traversal styling after a short delay
-                setTimeout(() => {
-                    this.g.selectAll('.node').classed('traversal', false);
-                    this.g.selectAll('.edge')
-                        .classed('traversal', false)
-                        .attr('stroke-dasharray', null)
-                        .attr('stroke-dashoffset', null);
-                }, 800);
+                // Clear at the end
+                this.g.selectAll('.node').classed('traversal', false);
+                this.g.selectAll('.edge')
+                    .classed('traversal', false)
+                    .attr('stroke-dasharray', null)
+                    .attr('stroke-dashoffset', null);
             }
         };
 
@@ -374,6 +395,7 @@ class BSTVisualizer {
     }
 
     animateSearchPath(path, found) {
+        const token = ++this.currentAnimationToken;
         if (path.length === 0) return;
 
         // Clear prior search styling
@@ -385,6 +407,7 @@ class BSTVisualizer {
         // Build quick lookup for edge animation by target id
         let index = 0;
         const step = () => {
+            if (token !== this.currentAnimationToken) return;
             if (index < path.length) {
                 const current = path[index];
                 // Highlight node
