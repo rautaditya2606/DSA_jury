@@ -375,30 +375,54 @@ class BSTVisualizer {
 
     animateSearchPath(path, found) {
         if (path.length === 0) return;
-        
+
+        // Clear prior search styling
+        this.g.selectAll('.node').classed('search-path', false);
+        this.g.selectAll('.edge').classed('search-path', false)
+            .attr('stroke-dasharray', null)
+            .attr('stroke-dashoffset', null);
+
+        // Build quick lookup for edge animation by target id
         let index = 0;
-        const animateNext = () => {
+        const step = () => {
             if (index < path.length) {
-                const node = path[index];
-                this.highlightNode(node.id, 'search-path');
+                const current = path[index];
+                // Highlight node
+                this.g.selectAll('.node')
+                    .filter(d => d && d.data && d.data.id === current.id)
+                    .classed('search-path', true);
+
+                // Animate incoming edge if not the root
+                if (index > 0) {
+                    const prev = path[index - 1];
+                    this.g.selectAll('.edge')
+                        .filter(l => l && l.target && l.target.data && l.target.data.id === current.id)
+                        .classed('search-path', true)
+                        .attr('stroke-dasharray', function() {
+                            const len = this.getTotalLength();
+                            return `${len} ${len}`;
+                        })
+                        .attr('stroke-dashoffset', function() {
+                            return this.getTotalLength();
+                        })
+                        .transition()
+                        .duration(this.animationSpeed / 1.2)
+                        .attr('stroke-dashoffset', 0);
+                }
+
                 index++;
-                setTimeout(animateNext, this.animationSpeed / 2);
-            } else if (found) {
-                // Final highlight for found node
-                setTimeout(() => {
-                    this.g.selectAll('.node').classed('search-path', false);
-                    this.g.selectAll('.edge').classed('search-path', false);
-                }, 1000);
+                setTimeout(step, this.animationSpeed / 1.1);
             } else {
-                // Clear highlights if not found
                 setTimeout(() => {
                     this.g.selectAll('.node').classed('search-path', false);
-                    this.g.selectAll('.edge').classed('search-path', false);
-                }, 500);
+                    this.g.selectAll('.edge').classed('search-path', false)
+                        .attr('stroke-dasharray', null)
+                        .attr('stroke-dashoffset', null);
+                }, 900);
             }
         };
-        
-        animateNext();
+
+        step();
     }
 
     highlightNode(nodeId, type) {
