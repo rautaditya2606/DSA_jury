@@ -50,6 +50,32 @@ class BinarySearchTree {
         }
     }
 
+    delete(value) {
+        const node = this._findNode(value);
+        if (!node) return null;
+
+        const deletedId = node.id;
+
+        if (!node.left && !node.right) {
+            this._replaceNode(node, null);
+        } else if (!node.left) {
+            this._replaceNode(node, node.right);
+        } else if (!node.right) {
+            this._replaceNode(node, node.left);
+        } else {
+            const successor = this._findMin(node.right);
+            node.value = successor.value; // keep node id for stable visualization
+            this._replaceNode(successor, successor.right);
+        }
+        this.size--;
+        return deletedId;
+    }
+
+    clear() {
+        this.root = null;
+        this.size = 0;
+    }
+
     search(value) {
         const path = [];
         let current = this.root;
@@ -133,6 +159,31 @@ class BinarySearchTree {
         
         return convert(this.root);
     }
+
+    _findNode(value) {
+        let cur = this.root;
+        while (cur) {
+            if (value === cur.value) return cur;
+            cur = value < cur.value ? cur.left : cur.right;
+        }
+        return null;
+    }
+
+    _findMin(node) {
+        while (node && node.left) node = node.left;
+        return node;
+    }
+
+    _replaceNode(oldNode, newNode) {
+        if (!oldNode.parent) {
+            this.root = newNode;
+        } else if (oldNode === oldNode.parent.left) {
+            oldNode.parent.left = newNode;
+        } else {
+            oldNode.parent.right = newNode;
+        }
+        if (newNode) newNode.parent = oldNode.parent;
+    }
 }
 
 // Visualization Class
@@ -184,6 +235,40 @@ class BSTVisualizer {
     }
 
     setupEventListeners() {
+        // Edit buttons
+        const insertBtn = document.getElementById('insertBtn');
+        const deleteBtn = document.getElementById('deleteBtn');
+        const clearBtn = document.getElementById('clearBtn');
+        const valueInput = document.getElementById('valueInput');
+
+        if (insertBtn) insertBtn.addEventListener('click', () => {
+            const value = parseInt(valueInput.value);
+            if (Number.isNaN(value)) return alert('Enter a valid number');
+            const node = this.bst.insert(value);
+            if (!node) return alert('Value already exists');
+            valueInput.value = '';
+            this.drawTree();
+            this._flashById(node.id, 'highlighted');
+        });
+
+        if (deleteBtn) deleteBtn.addEventListener('click', () => {
+            const value = parseInt(valueInput.value);
+            if (Number.isNaN(value)) return alert('Enter a valid number');
+            const deletedId = this.bst.delete(value);
+            if (!deletedId) return alert('Value not found');
+            valueInput.value = '';
+            this.drawTree();
+        });
+
+        if (clearBtn) clearBtn.addEventListener('click', () => {
+            this.bst.clear();
+            this.drawTree();
+            const info = document.getElementById('searchInfo');
+            if (info) info.style.display = 'none';
+            const out = document.getElementById('traversalOutput');
+            if (out) out.value = '';
+        });
+
         // Traversal buttons
         document.getElementById('inorderBtn').addEventListener('click', () => this.handleTraversal('inorder'));
         document.getElementById('preorderBtn').addEventListener('click', () => this.handleTraversal('preorder'));
@@ -235,23 +320,56 @@ class BSTVisualizer {
         // Clear any existing highlights
         this.g.selectAll('.node').classed('traversal', false);
         this.g.selectAll('.edge').classed('traversal', false);
-        
+
+        // Map node id to parent id using current D3 hierarchy in the scene
+        const idToParentId = new Map();
+        this.g.selectAll('.node').each((d) => {
+            if (d && d.parent && d.data && d.parent.data) {
+                idToParentId.set(d.data.id, d.parent.data.id);
+            }
+        });
+
         let index = 0;
         const animateNext = () => {
             if (index < nodes.length) {
-                const node = nodes[index];
-                this.highlightNode(node.id, 'traversal');
+                const current = nodes[index];
+                // Highlight node with traversal styling
+                this.g.selectAll('.node')
+                    .filter(d => d && d.data && d.data.id === current.id)
+                    .classed('traversal', true);
+
+                // Draw incoming edge with stroke-draw transition if it exists
+                const parentId = idToParentId.get(current.id);
+                if (parentId) {
+                    this.g.selectAll('.edge')
+                        .filter(l => l && l.target && l.target.data && l.target.data.id === current.id)
+                        .classed('traversal', true)
+                        .attr('stroke-dasharray', function() {
+                            const len = this.getTotalLength();
+                            return `${len} ${len}`;
+                        })
+                        .attr('stroke-dashoffset', function() {
+                            return this.getTotalLength();
+                        })
+                        .transition()
+                        .duration(this.animationSpeed)
+                        .attr('stroke-dashoffset', 0);
+                }
+
                 index++;
                 setTimeout(animateNext, this.animationSpeed);
             } else {
-                // Clear highlights after animation
+                // Clear traversal styling after a short delay
                 setTimeout(() => {
                     this.g.selectAll('.node').classed('traversal', false);
-                    this.g.selectAll('.edge').classed('traversal', false);
-                }, 1000);
+                    this.g.selectAll('.edge')
+                        .classed('traversal', false)
+                        .attr('stroke-dasharray', null)
+                        .attr('stroke-dashoffset', null);
+                }, 800);
             }
         };
-        
+
         animateNext();
     }
 
@@ -297,6 +415,14 @@ class BSTVisualizer {
         this.g.selectAll('.edge')
             .filter(d => d.target.id === nodeId)
             .classed(type, true);
+    }
+
+    _flashById(nodeId, cls) {
+        this.g.selectAll('.node').classed(cls, false);
+        this.g.selectAll('.node').filter(d => d.id === nodeId).classed(cls, true);
+        setTimeout(() => {
+            this.g.selectAll('.node').classed(cls, false);
+        }, 800);
     }
 
     drawTree() {

@@ -85,3 +85,14 @@
     background: linear-gradient(135deg, #10b981 0%, #059669 100%);
     color: white;
 }
+/* Optional subtle pulse for traversal nodes */
+@keyframes pulseGlow {
+    0% { filter: drop-shadow(0 0 2px rgba(124,58,237,0.2)); }
+    50% { filter: drop-shadow(0 0 10px rgba(124,58,237,0.8)); }
+    100% { filter: drop-shadow(0 0 2px rgba(124,58,237,0.2)); }
+}
+
+.node.traversal circle {
+    animation: pulseGlow 0.8s ease-in-out 1;
+    filter: drop-shadow(0 0 6px rgba(124, 58, 237, 0.6));
+}
